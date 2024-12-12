@@ -9,9 +9,10 @@
 # ---- Licence Apache v2
 """Utility functionality for apio click commands. """
 
-
+import sys
 from typing import Mapping, List, Tuple, Any, Dict, Union
 import click
+from apio import util
 
 
 # This text marker is inserted into the help text to indicates
@@ -34,13 +35,14 @@ def fatal_usage_error(cmd_ctx: click.Context, msg: str) -> None:
     )
     click.secho()
     click.secho(f"Error: {msg}", fg="red")
-    cmd_ctx.exit(1)
+    sys.exit(1)
 
 
-def _get_params_objs(
+def _get_all_params_definitions(
     cmd_ctx: click.Context,
 ) -> Dict[str, Union[click.Option, click.Argument]]:
-    """Return a mapping from param id to param obj."""
+    """Return a mapping from param id to param obj, for all options and
+    arguments that are defined for the command."""
     result = {}
     for param_obj in cmd_ctx.command.get_params(cmd_ctx):
         assert isinstance(param_obj, (click.Option, click.Argument)), type(
@@ -64,7 +66,7 @@ def _params_ids_to_aliases(
     e.g. "PACKAGES" for the argument packages.
     """
     # Param id -> param obj.
-    params_dict = _get_params_objs(cmd_ctx)
+    params_dict = _get_all_params_definitions(cmd_ctx)
 
     # Map the param ids to their canonical aliases.
     result = []
@@ -89,7 +91,7 @@ def _is_param_specified(cmd_ctx, param_id) -> bool:
     """Determine if the param with given id was specified in the
     command line."""
     # Mapping: param id -> param obj.
-    params_dict = _get_params_objs(cmd_ctx)
+    params_dict = _get_all_params_definitions(cmd_ctx)
     # Get the official status.
     param_src = cmd_ctx.get_parameter_source(param_id)
     is_specified = param_src == click.core.ParameterSource.COMMANDLINE
@@ -138,8 +140,10 @@ def check_at_most_one_param(
         canonical_aliases = _params_ids_to_aliases(
             cmd_ctx, specified_param_ids
         )
-        aliases_str = ", ".join(canonical_aliases)
-        fatal_usage_error(cmd_ctx, f"[{aliases_str}] are mutually exclusive.")
+        aliases_str = util.list_plurality(canonical_aliases, "and")
+        fatal_usage_error(
+            cmd_ctx, f"{aliases_str} cannot be combined together."
+        )
 
 
 def check_exactly_one_param(
@@ -162,15 +166,17 @@ def check_exactly_one_param(
     if len(specified_param_ids) < 1:
         # -- User specified Less flags than required.
         canonical_aliases = _params_ids_to_aliases(cmd_ctx, param_ids)
-        aliases_str = ", ".join(canonical_aliases)
-        fatal_usage_error(cmd_ctx, f"Specify one of [{aliases_str}].")
+        aliases_str = util.list_plurality(canonical_aliases, "or")
+        fatal_usage_error(cmd_ctx, f"specify one of {aliases_str}.")
     else:
         # -- User specified more flags than allowed.
         canonical_aliases = _params_ids_to_aliases(
             cmd_ctx, specified_param_ids
         )
-        aliases_str = ", ".join(canonical_aliases)
-        fatal_usage_error(cmd_ctx, f"Specify only one of [{aliases_str}].")
+        aliases_str = util.list_plurality(canonical_aliases, "and")
+        fatal_usage_error(
+            cmd_ctx, f"{aliases_str} cannot be combined together."
+        )
 
 
 def check_at_least_one_param(
@@ -190,9 +196,9 @@ def check_at_least_one_param(
     # If more 2 or more print an error and exit.
     if len(specified_param_ids) < 1:
         canonical_aliases = _params_ids_to_aliases(cmd_ctx, param_ids)
-        aliases_str = ", ".join(canonical_aliases)
+        aliases_str = util.list_plurality(canonical_aliases, "or")
         fatal_usage_error(
-            cmd_ctx, f"At list one of [{aliases_str}] must be specified."
+            cmd_ctx, f"at list one of {aliases_str} must be specified."
         )
 
 

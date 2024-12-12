@@ -9,26 +9,11 @@
 import shutil
 from pathlib import Path, PosixPath
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
+from typing import Optional, List
 import click
 from apio import util
 from apio import pkg_util
 from apio.apio_context import ApioContext
-
-# -- Error messages
-EXAMPLE_NOT_FOUND_MSG = """
-Warning: this example does not exist
-Use `apio examples -l` to list all the available examples"""
-
-USAGE_EXAMPLE = """
-To fetch example files:
-   apio examples -f <example-name>
-
-Example of use:
-   apio examples -f icesum/leds
-
-Type 'apio examples -h' for more details.
-"""
 
 
 @dataclass
@@ -49,7 +34,7 @@ class Examples:
         self.apio_ctx = apio_ctx
 
         # -- Folder where the example packages was installed
-        self.examples_dir = apio_ctx.get_package_dir("examples")
+        self.examples_dir = apio_ctx.get_package_dir("examples") / "examples"
 
     def get_examples_infos(self) -> Optional[List[ExampleInfo]]:
         """Scans the examples and returns a list of ExampleInfos.
@@ -66,7 +51,7 @@ class Examples:
                 boards_dirs.append(board_dir)
 
         # -- Collect the examples of each boards.
-        examples: List[Tuple[str, PosixPath]] = []
+        examples: List[ExampleInfo] = []
         for board_dir in boards_dirs:
 
             # -- Iterate board's example subdirectories.
@@ -138,16 +123,15 @@ class Examples:
         # -- For a terminal, emit additional summary.
         if output_config.terminal_mode():
             click.secho(f"Total: {len(examples)}")
-            click.secho(USAGE_EXAMPLE, fg="green")
 
         return 0
 
     def copy_example_dir(self, example: str, project_dir: Path, sayno: bool):
         """Copy the example creating the folder
-        Ex. The example Alhambra-II/ledon --> the folder Alhambra-II/ledon
+        Ex. The example alhambra-ii/ledon --> the folder alhambra-ii/ledon
         is created
           * INPUTS:
-            * example: Example name (Ex. 'Alhambra-II/ledon')
+            * example: Example name (Ex. 'alhambra-ii/ledon')
             * project_dir: (optional)
             * sayno: Automatically answer no
         """
@@ -166,7 +150,7 @@ class Examples:
 
         # -- If the source example path is not a folder... it is an error
         if not src_example_path.is_dir():
-            click.secho(EXAMPLE_NOT_FOUND_MSG, fg="yellow")
+            click.secho(f"Error: example [{example}] not found.", fg="red")
             return 1
 
         # -- The destination path is a folder...It means that the
@@ -205,7 +189,7 @@ class Examples:
     def copy_example_files(self, example: str, project_dir: Path, sayno: bool):
         """Copy the example files (not the initial folders)
         * INPUTS:
-            * example: Example name (Ex. 'Alhambra-II/ledon')
+            * example: Example name (Ex. 'alhambra-ii/ledon')
             * project_dir: (optional)
             * sayno: Automatically answer no
         """
@@ -221,9 +205,9 @@ class Examples:
         # -- Build the source example path (where the example was installed)
         src_example_path = self.examples_dir / example
 
-        # -- If the source example path is not a folder... it is an error
+        # -- If the source example path is not a folder. it is an error
         if not src_example_path.is_dir():
-            click.secho(EXAMPLE_NOT_FOUND_MSG, fg="yellow")
+            click.secho(f"Error: example [{example}] not found.", fg="red")
             return 1
 
         # -- Copy the example files!!
@@ -239,7 +223,7 @@ class Examples:
     ):
         """Copy the example files to the destination folder
         * INPUTS:
-          * example: Name of the example (Ex. 'Alhambra-II/ledon')
+          * example: Name of the example (Ex. 'alhambra-ii/ledon')
           * src_path: Source folder to copy
           * dest_path: Destination folder
         """
@@ -304,7 +288,7 @@ class Examples:
     def _copy_dir(self, example: str, src_path: Path, dest_path: Path):
         """Copy example of the src_path on the dest_path
         * INPUT
-          * example: Name of the example (Ex. 'Alhambra-II/ledon')
+          * example: Name of the example (Ex. 'alhambra-ii/ledon')
           * src_path: Source folder to copy
           * dest_path: Destination folder
         """

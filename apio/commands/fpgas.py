@@ -7,6 +7,7 @@
 # -- Licence GPLv2
 """Implementation of 'apio fpgas' command"""
 
+import sys
 from pathlib import Path
 import click
 from apio.apio_context import ApioContext
@@ -50,7 +51,7 @@ def list_fpgas(apio_ctx: ApioContext):
         if config.terminal_mode():
             # -- For terminal, print the FPGA name in color.
             fpga_str = click.style(f"{fpga:32}", fg="cyan")
-            item = f"• {fpga_str} {data_str}"
+            item = f"{fpga_str} {data_str}"
             click.secho(item)
         else:
             # -- For pipe, no colors and no bullet point.
@@ -94,7 +95,7 @@ Examples:
 @click.pass_context
 @options.project_dir_option
 def cli(
-    cmd_ctx: click.core.Context,
+    _: click.core.Context,
     # Options
     project_dir: Path,
 ):
@@ -107,4 +108,4 @@ def cli(
     apio_ctx = ApioContext(project_dir=project_dir, load_project=False)
 
     list_fpgas(apio_ctx)
-    cmd_ctx.exit(0)
+    sys.exit(0)

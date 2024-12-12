@@ -7,10 +7,11 @@
 # -- Licence GPLv2
 """Implementation of 'apio modify' command"""
 
+import sys
 from pathlib import Path
 from varname import nameof
 import click
-from apio.managers.project import Project
+from apio.managers.project import modify_project_file
 from apio import cmd_util
 from apio.commands import options
 from apio.apio_context import ApioContext
@@ -52,13 +53,17 @@ def cli(
     # -- Create the apio context.
     apio_ctx = ApioContext(project_dir=project_dir, load_project=False)
 
+    # -- If board is not empty, map it to canonical board id. This
+    # -- fails if the board is unknown.
+    if board:
+        board = apio_ctx.lookup_board_id(board)
+
     # Create the apio.ini file
-    ok = Project.modify_ini_file(
+    ok = modify_project_file(
         apio_ctx.project_dir,
         board,
         top_module,
-        apio_ctx.boards,
     )
 
     exit_code = 0 if ok else 1
-    cmd_ctx.exit(exit_code)
+    sys.exit(exit_code)

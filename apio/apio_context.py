@@ -11,13 +11,16 @@ import json
 import re
 import platform
 from collections import OrderedDict
-import shutil
 from pathlib import Path
 from typing import Optional, Dict
 import click
 from apio import util, env_options
 from apio.profile import Profile
-from apio.managers.project import Project
+from apio.managers.project import (
+    Project,
+    ProjectResolver,
+    load_project_from_file,
+)
 
 
 # ---------- RESOURCES
@@ -97,9 +100,6 @@ class ApioContext:
         # -- make the path longer and longer.
         self.env_was_already_set = False
 
-        # -- Save the load project status.
-        self._load_project = load_project
-
         # -- Maps the optional project_dir option to a path.
         self.project_dir: Path = util.get_project_dir(project_dir)
         ApioContext._check_no_spaces_in_dir(self.project_dir, "project")
@@ -160,10 +160,60 @@ class ApioContext:
             sorted(self.fpgas.items(), key=lambda t: t[0])
         )
 
-        # -- If requested, load the project's apio.ini
+        # -- Save the load_project request, mostly for debugging.
+        self.project_loading_requested = load_project
+
+        # -- If requested, try to load the project's apio.ini. If apio.ini
+        # -- does not exist, the loading returns None.
+        self._project: Project = None
         if load_project:
-            self._project = Project(self.project_dir)
-            self._project.read()
+            resolver = _ProjectResolverImpl(self)
+            self._project = load_project_from_file(self.project_dir, resolver)
+
+    def lookup_board_id(
+        self, board: str, *, warn: bool = True, strict: bool = True
+    ) -> str:
+        """Lookup and return the board's canonical board id which is its key
+        in boards.json().  'board' can be the canonical id itself or a
+        legacy id of the board as defined in boards.json.  The method prints
+        a warning if 'board' is a legacy board id that is mapped to its
+        canonical name and 'warn' is True. If the  board is not found, the
+        method returns None if 'strict' is False or exit the program with a
+        message if 'strict' is True."""
+        # -- If this fails, it's a programming error.
+        assert board is not None
+
+        # -- The result. The board's key in boards.json.
+        canonical_id = None
+
+        if board in self.boards:
+            # -- Here when board is already the canonical id.
+            canonical_id = board
+        else:
+            # -- Look up for a board with 'board' as its legacy id.
+            for board_key, board_val in self.boards.items():
+                if board == board_val.get("legacy_id", None):
+                    canonical_id = board_key
+                    break
+
+        # -- Fatal error if unknown board.
+        if strict and canonical_id is None:
+            click.secho(f"Error: no such board '{board}'", fg="red")
+            click.secho(
+                "\nRun 'apio boards' for the list of board ids.", fg="yellow"
+            )
+            sys.exit(1)
+
+        # -- Warning if caller used a legacy board id.
+        if warn and canonical_id and board != canonical_id:
+            click.secho(
+                f"Warning: '{board}' board name was changed. "
+                f"Please use '{canonical_id}' instead.",
+                fg="yellow",
+            )
+
+        # -- Return the canonical board id.
+        return canonical_id
 
     @staticmethod
     def _check_no_spaces_in_dir(dir_path: Path, subject: str):
@@ -182,17 +232,16 @@ class ApioContext:
             click.secho(f"'{str(dir_path)}'", fg="red")
             sys.exit(1)
 
-    def check_project_loaded(self):
-        """Assert that context was created with project loading.."""
-        assert (
-            self._load_project
-        ), "Apio context created without project loading."
+    @property
+    def has_project_loaded(self):
+        """Returns True if the project is loaded."""
+        return self._project is not None
 
     @property
-    def project(self):
-        """Property to return the project after verification that it was
-        loaded."""
-        self.check_project_loaded()
+    def project(self) -> Project:
+        """Return the project. It's None if project loading not requested or
+        project doesn't have apio.ini.
+        ."""
         return self._project
 
     def _load_resource(self, name: str, allow_custom: bool = False) -> dict:
@@ -254,7 +303,7 @@ class ApioContext:
             click.secho(f"{exc}\n", fg="red")
 
             # -- Abort!
-            sys.exit(2)
+            sys.exit(1)
 
         # -- Parse the json format!
         try:
@@ -428,62 +477,6 @@ class ApioContext:
 
         # -- Return the packages, classified
         return installed_packages, notinstalled_packages
-
-    def list_packages(self, installed=True, notinstalled=True):
-        """Return a list with all the installed/notinstalled packages"""
-
-        # Classify packages
-        installed_packages, notinstalled_packages = (
-            self.get_platform_packages_lists()
-        )
-
-        # -- Calculate the terminal width
-        terminal_width, _ = shutil.get_terminal_size()
-
-        # -- String with a horizontal line with the same width
-        # -- as the terminal
-        line = "─" * terminal_width
-        dline = "═" * terminal_width
-
-        if installed and installed_packages:
-
-            # ------- Print installed packages table
-            # -- Print the header
-            click.secho()
-            click.secho(dline, fg="green")
-            click.secho("Installed packages:", fg="green")
-
-            for package in installed_packages:
-                click.secho(line)
-                name = click.style(f"{package['name']}", fg="cyan", bold=True)
-                version = package["version"]
-                description = package["description"]
-
-                click.secho(f"• {name} {version}")
-                click.secho(f"  {description}")
-
-            click.secho(dline, fg="green")
-            click.secho(f"Total: {len(installed_packages)}")
-
-        if notinstalled and notinstalled_packages:
-
-            # ------ Print not installed packages table
-            # -- Print the header
-            click.secho()
-            click.secho(dline, fg="yellow")
-            click.secho("Available packages (Not installed):", fg="yellow")
-
-            for package in notinstalled_packages:
-
-                click.secho(line)
-                name = click.style(f"• {package['name']}", fg="red")
-                description = package["description"]
-                click.secho(f"{name}  {description}")
-
-            click.secho(dline, fg="yellow")
-            click.secho(f"Total: {len(notinstalled_packages)}")
-
-        click.secho("\n")
 
     def get_package_dir(self, package_name: str) -> Path:
         """Returns the root path of a package with given name."""
@@ -705,3 +698,16 @@ class ApioContext:
 
         # -- All done.
         return packages_dir
+
+
+# pylint: disable=too-few-public-methods
+class _ProjectResolverImpl(ProjectResolver):
+    def __init__(self, apio_context: ApioContext):
+        """When ApioContext instanciates this object, ApioContext is fully
+        constructed, except for the project field."""
+        self._apio_context = apio_context
+
+    # @override
+    def lookup_board_id(self, board: str) -> str:
+        """Implementation of lookup_board_id."""
+        return self._apio_context.lookup_board_id(board)

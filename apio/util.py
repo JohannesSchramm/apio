@@ -15,7 +15,7 @@ import json
 import shutil
 from enum import Enum
 from dataclasses import dataclass
-from typing import Optional, Any, Tuple
+from typing import Optional, Any, Tuple, List
 import subprocess
 from threading import Thread
 from pathlib import Path
@@ -148,20 +148,6 @@ def get_path_in_apio_package(subpath: str) -> Path:
 
     # -- Return the path
     return path
-
-
-def call(cmd):
-    """Execute the given command."""
-
-    # -- Execute the command from the shell
-    result = subprocess.call(cmd, shell=True)
-
-    # -- Command not found
-    if result == 127:
-        message = f"ERROR. Comand not found!: {cmd}"
-        click.secho(message, fg="red")
-
-    return result
 
 
 @dataclass(frozen=True)
@@ -486,24 +472,6 @@ def get_python_ver_tuple() -> Tuple[int, int, int]:
     return sys.version_info[:3]
 
 
-def safe_click(text, *args, **kwargs):
-    """Prints text to the console handling potential Unicode errors,
-    forwarding any additional arguments to click.echo. This permits
-    avoid the need of setting encode environment variables for utf-8"""
-
-    error_flag = kwargs.pop("err", False)
-
-    try:
-        click.secho(text, err=error_flag, *args, **kwargs)
-    except UnicodeEncodeError:
-        cleaned_text = text.encode("ascii", errors="replace").decode("ascii")
-        # if encoding fails, after retry without errors , bad characters are
-        # replaced by '?' character, and is better replace for = because is the
-        # most common character error
-        cleaned_text = "".join([ch if ord(ch) < 128 else "=" for ch in text])
-        click.secho(cleaned_text, err=error_flag, *args, **kwargs)
-
-
 def plurality(obj: Any, singular: str, plural: str = None) -> str:
     """Returns singular or plural based on the size of the object."""
     # -- Figure out the size of the object
@@ -520,3 +488,20 @@ def plurality(obj: Any, singular: str, plural: str = None) -> str:
     if plural is None:
         plural = singular + "s"
     return f"{n} {plural}"
+
+
+def list_plurality(str_list: List[str], conjunction: str) -> str:
+    """Format a list as a human friendly string."""
+    # -- This is a programming error. Not a user error.
+    assert str_list, "list_plurarlity expect len() >= 1."
+
+    # -- Handle the case of a single item.
+    if len(str_list) == 1:
+        return str_list[0]
+
+    # -- Handle the case of 2 items.
+    if len(str_list) == 2:
+        return f"{str_list[0]} {conjunction} {str_list[1]}"
+
+    # -- Handle the case of three or more items.
+    return ", ".join(str_list[:-1]) + f", {conjunction} {str_list[-1]}"

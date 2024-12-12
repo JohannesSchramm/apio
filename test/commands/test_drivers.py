@@ -11,25 +11,22 @@ from apio.commands.drivers import cli as apio_drivers
 def test_drivers(apio_runner: ApioRunner):
     """Test "apio drivers" """
 
-    with apio_runner.in_disposable_temp_dir():
-
-        # -- Config the apio test environment
-        apio_runner.setup_env()
+    with apio_runner.in_sandbox() as sb:
 
         # -- Execute "apio drivers"
-        result = apio_runner.invoke(apio_drivers)
+        result = sb.invoke_apio_cmd(apio_drivers)
         assert result.exit_code == 1
         assert (
-            "Error: Specify one of [--ftdi-install, --ftdi-uninstall, "
-            "--serial-install, --serial-uninstall]" in result.output
+            "specify one of --ftdi-install, --ftdi-uninstall, "
+            "--serial-install, or --serial-uninstall" in result.output
         )
 
         # -- Execute "apio --ftdi-install, --serial-install"
-        result = apio_runner.invoke(
+        result = sb.invoke_apio_cmd(
             apio_drivers, ["--ftdi-install", "--serial-install"]
         )
         assert result.exit_code == 1, result.output
         assert (
-            "Error: Specify only one of [--ftdi-install, --serial-install]"
+            "Error: --ftdi-install and --serial-install cannot be combined"
             in result.output
         )
