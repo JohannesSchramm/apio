@@ -23,6 +23,8 @@ APIO_INI = "apio.ini"
 
 DEFAULT_TOP_MODULE = "main"
 
+DEFAULT_TESTBENCH = "main_tb.v"
+
 TOP_COMMENT = """\
 APIO project configuration file. For details see
 https://github.com/FPGAwars/apio/wiki/Project-configuration-file
@@ -32,7 +34,7 @@ https://github.com/FPGAwars/apio/wiki/Project-configuration-file
 REQUIRED_OPTIONS = {"board"}
 
 # -- Set of additional options a project may have.
-OPTIONAL_OPTIONS = {"top-module"}
+OPTIONAL_OPTIONS = {"top-module", "testbench"}
 
 # -- Set of all options a project may have.
 ALL_OPTIONS = REQUIRED_OPTIONS | OPTIONAL_OPTIONS

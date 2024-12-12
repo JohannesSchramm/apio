@@ -54,7 +54,7 @@ configuration for future invocations.
     cls=cmd_util.ApioCommand,
 )
 @click.pass_context
-@click.argument("testbench", nargs=1, required=True)
+@click.argument("testbench", nargs=1, required=False)
 @options.force_option_gen(help="Force simulation.")
 @options.project_dir_option
 def cli(

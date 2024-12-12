@@ -10,7 +10,7 @@ import traceback
 from functools import wraps
 from typing import Dict, Tuple, Optional, List, Any
 import click
-from apio.managers.project import DEFAULT_TOP_MODULE
+from apio.managers.project import DEFAULT_TOP_MODULE, DEFAULT_TESTBENCH
 from apio.apio_context import ApioContext
 
 
@@ -329,6 +329,24 @@ def process_arguments(
             click.secho(
                 "Warning: 'top-module' is not specified in apio.ini, "
                 f"assuming: '{DEFAULT_TOP_MODULE}'",
+                fg="yellow",
+            )
+
+    # -- If testbench not specified by the user, determine what value to use.
+    if not args[ARG_TESTBENCH].has_value:
+
+        if project and project["testbench"]:
+            # -- If apio.ini has a testbench value use it.
+
+            args[ARG_TESTBENCH].set(project["testbench"])
+        else:
+
+            # -- Use the default top-level
+            args[ARG_TESTBENCH].set(DEFAULT_TESTBENCH)
+
+            click.secho(
+                "Warning: 'testbench' is not specified in apio.ini, "
+                f"assuming: '{DEFAULT_TESTBENCH}'",
                 fg="yellow",
             )
 
