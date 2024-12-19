@@ -273,7 +273,7 @@ def iverilog_tb_generator(source, target, env, for_signature):
             verbose=VERBOSE_ALL,
             vcd_output_name=testbench_name,
             is_interactive=("sim" in COMMAND_LINE_TARGETS),
-            extra_params=["-DNO_ICE40_DEFAULT_ASSIGNMENTS"],
+            extra_params=["-DNO_ICE40_DEFAULT_ASSIGNMENTS", "-D SIMULATION"],
             lib_files=[YOSYS_LIB_FILE],
         ),
     ]
