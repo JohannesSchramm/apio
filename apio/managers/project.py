@@ -34,7 +34,7 @@ https://github.com/FPGAwars/apio/wiki/Project-configuration-file
 REQUIRED_OPTIONS = {"board"}
 
 # -- Set of additional options a project may have.
-OPTIONAL_OPTIONS = {"top-module", "testbench"}
+OPTIONAL_OPTIONS = {"top-module", "testbench", "src"}
 
 # -- Set of all options a project may have.
 ALL_OPTIONS = REQUIRED_OPTIONS | OPTIONAL_OPTIONS

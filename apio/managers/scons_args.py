@@ -36,6 +36,7 @@ ARG_VERILATOR_ALL = "all"
 ARG_VERILATOR_NO_STYLE = "nostyle"
 ARG_VERILATOR_NO_WARN = "nowarn"
 ARG_VERILATOR_WARN = "warn"
+ARG_SRC_DIR = "src_dir"
 
 
 def debug_dump(process_arguments_func):
@@ -223,6 +224,7 @@ def process_arguments(
         ARG_VERILATOR_NO_STYLE: Arg(ARG_VERILATOR_NO_STYLE, "nostyle"),
         ARG_VERILATOR_NO_WARN: Arg(ARG_VERILATOR_NO_WARN, "nowarn"),
         ARG_VERILATOR_WARN: Arg(ARG_VERILATOR_WARN, "warn"),
+        ARG_SRC_DIR: Arg(ARG_SRC_DIR, "src_dir"),
     }
 
     # -- Populate a subset of the args from the seed. We ignore values such as
@@ -349,6 +351,15 @@ def process_arguments(
                 f"assuming: '{DEFAULT_TESTBENCH}'",
                 fg="yellow",
             )
+    # -- If src-dir not specified by the cli, determine what value to use.
+    if not args[ARG_SRC_DIR].has_value:
+
+        if project and project["src"]:
+            # -- If apio.ini has a src value use it.
+
+            args[ARG_SRC_DIR].set(project["src"])
+        else:
+            args[ARG_SRC_DIR].set("")
 
     # -- Set the platform id.
     assert apio_ctx.platform_id, "Missing platform_id in apio context"

@@ -487,22 +487,23 @@ def make_graphviz_builder(
     return graphviz_builder
 
 
-def get_source_files(env: SConsEnvironment) -> Tuple[List[str], List[str]]:
+def get_source_files(env: SConsEnvironment, src_dir = "") -> Tuple[List[str], List[str]]:
     """Get the list of *.v files, splitted into synth and testbench lists.
     If a .v file has the suffix _tb.v it's is classified st a testbench,
     otherwise as a synthesis file.
     """
+
     # -- Get a list of all *.v files in the project dir.
-    files: List[File] = env.Glob("*.v")
+    files: List[File] = env.Glob(os.path.join(src_dir ,"*.v"))
 
     # Split file names to synth files and testbench file lists
     synth_srcs = []
     test_srcs = []
     for file in files:
         if has_testbench_name(env, file.name):
-            test_srcs.append(file.name)
+            test_srcs.append(file)
         else:
-            synth_srcs.append(file.name)
+            synth_srcs.append(file)
     return (synth_srcs, test_srcs)
 
 

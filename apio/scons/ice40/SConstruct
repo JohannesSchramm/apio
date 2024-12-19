@@ -94,6 +94,7 @@ VERILATOR_NO_STYLE = arg_bool(env, "nostyle", False)
 VERILATOR_NOWARNS = arg_str(env, "nowarn", "").split(",")
 VERILATOR_WARNS = arg_str(env, "warn", "").split(",")
 GRAPH_SPEC = arg_str(env, "graph_spec", "")
+SRC_DIR = arg_str(env, "src_dir", "")
 
 
 # -- Resources paths
@@ -109,7 +110,7 @@ verilog_src_scanner = make_verilog_src_scanner(env)
 
 # -- Get a list of the synthesizable files (e.g. "main.v") and a list of
 # -- the testbench files (e.g. "main_tb.v")
-synth_srcs, test_srcs = get_source_files(env)
+synth_srcs, test_srcs = get_source_files(env, SRC_DIR)
 
 
 # -- Get the PCF file name.
